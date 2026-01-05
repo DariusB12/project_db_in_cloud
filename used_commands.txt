@@ -1,0 +1,73 @@
+SHOW ALL THE TABLES FROM THE MYSQL DB:
+sudo docker compose -f docker-compose-debezium-mp.yaml exec mysql     mysql -u root -e 'show tables in no_temporal_extensions;'
+SHOW ALL THE TABLES FORM THE POSTGRESQL DB:
+sudo docker compose -f docker-compose-debezium-mp.yaml exec -e PGPASSWORD=' ' postgres \
+    psql -U postgres -d no_temporal_extensions -c "\dt"
+
+
+CHEQUE THE KAFKA TOPICS:
+sudo docker compose -f docker-compose-debezium-mp.yaml exec kafka     /kafka/bin/kafka-topics.sh     --bootstrap-server kafka:9092     --lisT
+CHEQUE KAFKA GROUPS:
+sudo docker compose -f docker-compose-debezium-mp.yaml exec kafka     /kafka/bin/kafka-consumer-groups.sh     --bootstrap-server kafka:9092     --list
+
+COnnector mysql:
+curl -i -X POST http://localhost:8083/connectors/ \
+  -H "Accept:application/json" \
+  -H "Content-Type:application/json" \
+  -d '{
+    "name": "inventory-source-mysql",
+    "config": {
+        "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+        "tasks.max": "1",
+        "database.hostname": "mysql",
+        "database.port": "3306",
+        "database.user": "root",
+        "database.password": "",
+        "database.server.id": "184054",
+        "topic.prefix": "from_mysql",
+        "table.include.list": "no_temporal_extensions.supplier,no_temporal_extensions.warehouse,no_temporal_extensions.product,no_temporal_extensions.product_price,no_temporal_extensions.inventory_movement",
+        "schema.history.internal.kafka.bootstrap.servers": "kafka:9092",
+        "schema.history.internal.kafka.topic": "schema-changes.inventory",
+        "transforms": "route",
+        "transforms.route.type": "org.apache.kafka.connect.transforms.RegexRouter",
+        "transforms.route.regex": "([^.]+)\\.([^.]+)\\.([^.]+)",
+        "transforms.route.replacement": "from_mysql_$3"
+    }
+}'
+
+
+CONNECTOR POSTGRESQL:
+curl -i -X POST http://localhost:8083/connectors/ \
+  -H "Accept:application/json" \
+  -H "Content-Type:application/json" \
+  -d \
+'{
+    "name": "inventory-sink-postgres",
+    "config": {
+        "connector.class": "io.debezium.connector.jdbc.JdbcSinkConnector",
+        "topics.regex": "from_mysql_(.*)",
+        "connection.url": "jdbc:postgresql://postgres:5432/postgres?currentSchema=target",
+        "connection.username": "postgres",
+        "connection.password": "any_password",
+        "auto.create": "true",
+        "insert.mode": "upsert",
+        "delete.enabled": "true",
+        "primary.key.mode": "record_key",
+        "schema.evolution": "basic"
+    }
+}'
+
+Cheque if the connectors were created:
+curl -s -XGET http://localhost:8083/connectors | jq '.[]'
+
+
+ Check the initialized destination table data
+sudo docker compose -f ${DC_FILE} exec -u postgres postgres \
+    psql -c 'select * from target.from_mysql_supplier;'
+	
+
+COMMAND TO ADD IN MYSQL DB SMTH:
+sudo docker exec -it mysql mysql -u root -e "USE no_temporal_extensions; insert into supplier values (8,'fdfdfdss','fdsffdsfds');"
+COMMAND TO CHECK THAT THE TARGET RECEIVED THE CHANGES:
+sudo docker compose -f ${DC_FILE} exec -u postgres postgres     psql -c 'select * from target.from_mysql_supplier;'
+
