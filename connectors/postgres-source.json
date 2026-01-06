@@ -1,0 +1,21 @@
+{
+    "name": "postgres-source",
+    "config": {
+        "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+        "tasks.max": "1",
+        "database.hostname": "postgres",
+        "database.port": "5432",
+        "database.user": "postgres",
+        "database.password": "dummy",
+        "database.dbname": "no_temporal_extensions",
+        "topic.prefix": "from_postgres",
+        "table.include.list": "public.supplier,public.warehouse,public.product,public.product_price,public.inventory_movement",
+        "plugin.name": "pgoutput",
+        "publication.name": "dbz_publication",
+        "slot.name": "debezium_slot",
+        "transforms": "route",
+        "transforms.route.type": "org.apache.kafka.connect.transforms.RegexRouter",
+        "transforms.route.regex": "([^.]+)\\.([^.]+)\\.([^.]+)",
+        "transforms.route.replacement": "from_postgres_$3"
+    }
+}

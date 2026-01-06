@@ -1,0 +1,17 @@
+{
+    "name": "postgres-sink",
+    "config": {
+        "connector.class": "io.debezium.connector.jdbc.JdbcSinkConnector",
+        "tasks.max": "1",
+        "topics.regex": "from_mysql_(.*)",
+        "connection.url": "jdbc:postgresql://postgres:5432/no_temporal_extensions",
+        "connection.username": "postgres",
+        "connection.password": "dummy",
+        "auto.create": "true",
+        "auto.evolve": "true",
+        "insert.mode": "upsert",
+        "delete.enabled": "true",
+        "primary.key.mode": "record_key",
+        "schema.evolution": "basic"
+    }
+}
