@@ -1,8 +1,11 @@
-FROM postgres:15
+FROM postgres:16
 
-# Setăm baza de date implicită
 ENV POSTGRES_DB=no_temporal_extensions
-ENV POSTGRES_PASSWORD= 
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=dummy
 
-# Copiem schema în folderul de inițializare
+COPY postgresql.conf /etc/postgresql/postgresql.conf
+
 COPY bitemporal_schema.sql /docker-entrypoint-initdb.d/
+
+CMD ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]

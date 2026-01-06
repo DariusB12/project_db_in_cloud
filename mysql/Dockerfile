@@ -1,10 +1,8 @@
-# Folosim imaginea oficială de MySQL
-FROM mysql:8.0
+FROM mysql:8.4
 
-# Setăm variabilele de mediu (opțional aici, pot fi puse și în docker-compose)
 ENV MYSQL_DATABASE=no_temporal_extensions
-ENV MYSQL_ROOT_PASSWORD= 
+ENV MYSQL_ROOT_PASSWORD=dummy
 
-# Copiem schema.sql în folderul de inițializare
-# Toate scripturile din acest folder sunt rulate la prima pornire
+COPY my.cnf /etc/mysql/conf.d/my.cnf
+
 COPY bitemporal_schema.sql /docker-entrypoint-initdb.d/

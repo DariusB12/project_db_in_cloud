@@ -1,50 +1,74 @@
 services:
-  zookeeper:
-    container_name: zookeeper
-    image: quay.io/debezium/zookeeper:2.4
-    ports:
-     - 2181:2181
-     - 2888:2888
-     - 3888:3888
-  kafka:  
+  # Kafka with KRaft (no ZooKeeper)
+  kafka:
     container_name: kafka
-    image: quay.io/debezium/kafka:2.4
+    image: quay.io/debezium/kafka:3.0
     ports:
-     - 9092:9092
-    depends_on:
-     - zookeeper
+      - 9092:9092
+      - 9093:9093
     environment:
-     - ZOOKEEPER_CONNECT=zookeeper:2181
+      - CLUSTER_ID=oh-sxaDRTcyAr6pFRbXyzA
+      - NODE_ID=1
+      - NODE_ROLE=combined
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_LISTENERS=PLAINTEXT://kafka:9092,CONTROLLER://kafka:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_PROCESS_ROLES=broker,controller
+      # Single-node cluster settings
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+
+  # Kafka UI for monitoring
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8080:8080
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=cdc-cluster
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+    depends_on:
+      - kafka
+
+  # MySQL 8.4 with binlog enabled
   mysql:
     container_name: mysql
     build: ./mysql
     ports:
-     - 3307:3306
+      - 3307:3306
     environment:
-     - MYSQL_ROOT_PASSWORD= # Poți lăsa gol aici
-     - MYSQL_ALLOW_EMPTY_PASSWORD=yes
-     - MYSQL_DATABASE=no_temporal_extensions
+      - MYSQL_ROOT_PASSWORD=dummy
+      - MYSQL_DATABASE=no_temporal_extensions
+
+  # PostgreSQL 16 with logical replication
   postgres:
     container_name: postgres
     build: ./postgresql
     ports:
-     - 5433:5432
+      - 5433:5432
     environment:
-     - POSTGRES_USER=postgres
-     - POSTGRES_PASSWORD= # Dacă vrei parolă goală aici
-     - POSTGRES_HOST_AUTH_METHOD=trust # Aceasta permite conectarea fără parolă
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=dummy
+
+  # Debezium Connect with JDBC Sink
   connect:
     container_name: connect
-    image: quay.io/debezium/connect:2.4
+    build: ./connect
     ports:
-     - 8083:8083
+      - 8083:8083
     depends_on:
-     - kafka
-     - mysql
-     - postgres
+      - kafka
+      - mysql
+      - postgres
     environment:
-     - BOOTSTRAP_SERVERS=kafka:9092
-     - GROUP_ID=1
-     - CONFIG_STORAGE_TOPIC=my_connect_configs
-     - OFFSET_STORAGE_TOPIC=my_connect_offsets
-     - STATUS_STORAGE_TOPIC=my_connect_statuses
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - GROUP_ID=1
+      - CONFIG_STORAGE_TOPIC=my_connect_configs
+      - OFFSET_STORAGE_TOPIC=my_connect_offsets
+      - STATUS_STORAGE_TOPIC=my_connect_statuses
+      # Single-node cluster replication factors
+      - CONFIG_STORAGE_REPLICATION_FACTOR=1
+      - OFFSET_STORAGE_REPLICATION_FACTOR=1
+      - STATUS_STORAGE_REPLICATION_FACTOR=1

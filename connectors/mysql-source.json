@@ -1,0 +1,21 @@
+{
+  "name": "mysql-source",
+  "config": {
+    "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+    "tasks.max": "1",
+    "database.hostname": "mysql",
+    "database.port": "3306",
+    "database.user": "root",
+    "database.password": "dummy",
+    "database.server.id": "184054",
+    "topic.prefix": "from_mysql",
+    "database.include.list": "no_temporal_extensions",
+    "table.include.list": "no_temporal_extensions.supplier,no_temporal_extensions.warehouse,no_temporal_extensions.product,no_temporal_extensions.product_price,no_temporal_extensions.inventory_movement",
+    "schema.history.internal.kafka.bootstrap.servers": "kafka:9092",
+    "schema.history.internal.kafka.topic": "schema-history-mysql",
+    "transforms": "route",
+    "transforms.route.type": "org.apache.kafka.connect.transforms.RegexRouter",
+    "transforms.route.regex": "([^.]+)\\.([^.]+)\\.([^.]+)",
+    "transforms.route.replacement": "from_mysql_$3"
+  }
+}

@@ -1,0 +1,18 @@
+{
+    "name": "mysql-sink",
+    "config": {
+        "connector.class": "io.debezium.connector.jdbc.JdbcSinkConnector",
+        "tasks.max": "1",
+        "topics.regex": "from_postgres_(supplier|warehouse|product|product_price|inventory_movement)$",
+        "connection.url": "jdbc:mysql://mysql:3306/no_temporal_extensions?allowEmptyPassword=true&allowPublicKeyRetrieval=true&useSSL=false",
+        "connection.username": "root",
+        "connection.password": "dummy",
+        "dialect.name": "mysql",
+        "auto.create": "true",
+        "auto.evolve": "true",
+        "insert.mode": "upsert",
+        "delete.enabled": "true",
+        "primary.key.mode": "record_key",
+        "schema.evolution": "basic"
+    }
+}
